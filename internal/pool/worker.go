@@ -21,38 +21,24 @@ func (p *Pool) Worker() {
 		p.Wg.Done()
 	}()
 
-	timer := time.NewTimer(p.IdleTimeout)
-	defer timer.Stop()
-
 	for {
 		atomic.AddInt64(&p.IdleWorkers, 1)
 
-		select {
-		case <-p.Ctx.Done():
-			atomic.AddInt64(&p.IdleWorkers, -1)
-			return
+		// Use PopWithTimeout to allow for scaling down
+		task, timedOut := p.TaskQueue.PopWithTimeout(p.IdleTimeout)
+		atomic.AddInt64(&p.IdleWorkers, -1)
 
-		case task, ok := <-p.Queue:
-			atomic.AddInt64(&p.IdleWorkers, -1)
-			if !ok {
-				return
-			}
-			p.Execute(task)
-			if !timer.Stop() {
-				select {
-				case <-timer.C:
-				default:
+		if task == nil {
+			if timedOut {
+				if p.ShouldScaleDown() {
+					return
 				}
+				continue
 			}
-			timer.Reset(p.IdleTimeout)
-
-		case <-timer.C:
-			atomic.AddInt64(&p.IdleWorkers, -1)
-			if p.ShouldScaleDown() {
-				return
-			}
-			timer.Reset(p.IdleTimeout)
+			return // Queue closed
 		}
+
+		p.Execute(*task)
 	}
 }
 

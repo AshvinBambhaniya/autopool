@@ -11,6 +11,14 @@ import (
 // or the task-specific timeout is exceeded.
 type Task func(ctx context.Context) error
 
+// Task priorities. Higher values indicate higher priority.
+const (
+	PriorityLow      = 0
+	PriorityNormal   = 10
+	PriorityHigh     = 50
+	PriorityCritical = 100
+)
+
 // TaskOptions provides granular control over individual task execution.
 type TaskOptions struct {
 	// RetryCount is the number of times a task should be retried on failure.
@@ -22,6 +30,10 @@ type TaskOptions struct {
 	// Timeout is the maximum execution time for a single task run.
 	// If set, a context with timeout will be passed to the task.
 	Timeout time.Duration
+	// Priority determines the execution order of the task.
+	// Higher priority tasks are executed before lower priority ones.
+	// Default is PriorityNormal (10).
+	Priority int
 }
 
 // TaskWrapper combines a task function with its associated options.

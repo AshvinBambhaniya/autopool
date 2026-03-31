@@ -1,8 +1,8 @@
 # autopool
 
-**Zero-config, auto-scaling worker pool for Go.**
+**Zero-config, auto-scaling worker pool for Go with priority-aware scheduling.**
 
-autopool is a lightweight, high-performance library that manages an elastic pool of workers to process tasks asynchronously. It automatically scales workers up under load and down when idle, ensuring your application remains responsive and memory-safe.
+`autopool` is a lightweight, high-performance library that manages an elastic pool of workers to process tasks asynchronously. It combines dynamic auto-scaling with a sophisticated priority-aware queue, ensuring that critical tasks jump the line while background work remains resilient and memory-safe.
 
 [![Go CI](https://github.com/AshvinBambhaniya/autopool/actions/workflows/go.yml/badge.svg)](https://github.com/AshvinBambhaniya/autopool/actions/workflows/go.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/AshvinBambhaniya/autopool)](https://goreportcard.com/report/github.com/AshvinBambhaniya/autopool)
@@ -12,8 +12,10 @@ autopool is a lightweight, high-performance library that manages an elastic pool
 ## Features
 
 - **High Throughput:** Process millions of tasks per second with minimal overhead.
+- **Priority-Aware Scheduling:** Support for `Critical`, `High`, `Normal`, and `Low` priority levels.
+- **Anti-Starvation (Aging):** Virtual Runtime model ensures low-priority tasks eventually execute even under heavy load.
 - **Auto-scaling:** Spawns workers on demand and terminates idle ones automatically.
-- **Resource Safety:** Bounded queue provides natural backpressure and prevents memory exhaustion.
+- **Resource Safety:** Bounded priority queue provides natural backpressure and prevents memory exhaustion.
 - **Graceful Shutdown:** Ensures active tasks are drained completely before stopping.
 - **Panic Recovery:** Built-in recovery per worker prevents cascading pool failures.
 - **Smart Retries:** Per-task exponential backoff strategy for resilient processing.
@@ -44,11 +46,17 @@ func main() {
 		autopool.WithQueueSize(100),
 	)
 
-	// Submit a task
+	// Submit a task (defaults to PriorityNormal)
 	p.Submit(func(ctx context.Context) error {
 		fmt.Println("Processing task...")
 		return nil
 	})
+
+	// Submit a high-priority task that jumps the line
+	p.SubmitWithOptions(func(ctx context.Context) error {
+		fmt.Println("Processing critical work...")
+		return nil
+	}, autopool.TaskOptions{Priority: autopool.PriorityHigh})
 
 	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -74,17 +82,24 @@ p := autopool.New(
 
 ## Per-Task Options
 
-You can control retry behavior and timeouts for individual tasks:
+You can control retry behavior, timeouts, and priority for individual tasks:
 
 ```go
 err := p.SubmitWithOptions(func(ctx context.Context) error {
     return doWork()
 }, autopool.TaskOptions{
+    Priority:   autopool.PriorityHigh,
     RetryCount: 3,
     RetryDelay: 500 * time.Millisecond,
     Timeout:    2 * time.Second,
 })
 ```
+
+## Task Prioritization & Aging
+
+`autopool` uses a **Virtual Runtime Aging** model. When a task is submitted, it is assigned a virtual score based on its priority. As time passes, the relative "urgency" of older tasks increases naturally, ensuring that high-priority tasks jump the line without starving low-priority tasks indefinitely.
+
+Supported levels: `PriorityLow`, `PriorityNormal` (default), `PriorityHigh`, `PriorityCritical`.
 
 ## Benchmarks
 
@@ -92,9 +107,10 @@ Measured on 12th Gen Intel(R) Core(TM) i7-12700:
 
 | Operation | Performance |
 | :--- | :--- |
-| **High Concurrency** | **~28,000 ns/op** |
-| **Throughput (1k tasks)** | **~835,000 ns** |
-| **Goroutine Leaks** | **None (Verified)** |
+| **Queue Push** | **~52 ns/op** |
+| **Queue Pop** | **~204 ns/op** |
+| **Throughput (100k tasks)** | **~1,200,000 tasks/sec** |
+| **Goroutine Leaks** | **None (Verified with -race)** |
 
 ## Contributing
 

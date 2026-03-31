@@ -8,7 +8,7 @@ import (
 func (p *Pool) ScaleUp() {
 	current := atomic.LoadInt64(&p.CurrentWorkers)
 	idle := atomic.LoadInt64(&p.IdleWorkers)
-	queueLen := len(p.Queue)
+	queueLen := p.TaskQueue.Len()
 
 	// Scale up if no idle workers OR if work is backed up in the queue.
 	if (idle == 0 || queueLen > 0) && current < int64(p.MaxWorkers) {
