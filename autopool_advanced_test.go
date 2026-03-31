@@ -77,7 +77,7 @@ func TestPool_HighThroughputLoad(t *testing.T) {
 	// Wait for completion via Shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	if err := p.Shutdown(ctx); err != nil {
 		t.Fatalf("Shutdown during load test failed: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestPool_HighThroughputLoad(t *testing.T) {
 	duration := time.Since(start)
 	finalCount := atomic.LoadInt64(&completedTasks)
 
-	t.Logf("Processed %d tasks in %v (%.0f tasks/sec)", 
+	t.Logf("Processed %d tasks in %v (%.0f tasks/sec)",
 		finalCount, duration, float64(finalCount)/duration.Seconds())
 
 	if finalCount != taskCount {
