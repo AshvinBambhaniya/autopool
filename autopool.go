@@ -2,7 +2,8 @@
 //
 // It automatically manages a pool of goroutines, scaling up when tasks are
 // submitted and scaling down when workers are idle, ensuring efficient
-// resource usage and high throughput.
+// resource usage and high throughput. It also supports task prioritization
+// and adaptive resource-aware scaling.
 package autopool
 
 import (
@@ -18,12 +19,12 @@ import (
 // of the worker pool.
 type Pool interface {
 	// Submit adds a task to the queue for asynchronous execution.
-	// It blocks if the task queue is full (natural backpressure).
+	// It uses PriorityNormal and blocks if the task queue is full.
 	// Returns ErrAlreadyClosed if the pool is no longer running.
 	Submit(task Task) error
 
 	// SubmitWithOptions adds a task with custom execution options such as
-	// retries and timeouts.
+	// retries, timeouts, and priority.
 	// Returns ErrAlreadyClosed if the pool is no longer running.
 	SubmitWithOptions(task Task, opts TaskOptions) error
 
@@ -42,8 +43,16 @@ type Pool interface {
 type Task = types.Task
 
 // TaskOptions provides granular control over individual task execution,
-// allowing for per-task retry logic and timeouts.
+// allowing for per-task retry logic, timeouts, and prioritization.
 type TaskOptions = types.TaskOptions
+
+// Task priorities. Higher values indicate higher priority.
+const (
+	PriorityLow      = types.PriorityLow      // 0
+	PriorityNormal   = types.PriorityNormal   // 10 (Default)
+	PriorityHigh     = types.PriorityHigh     // 50
+	PriorityCritical = types.PriorityCritical // 100
+)
 
 // Stats provides real-time information about the pool's performance and load.
 type Stats = types.Stats
@@ -62,7 +71,7 @@ var (
 
 // New creates and initializes a new worker pool with the provided options.
 // If no options are provided, it uses sensible defaults (e.g., max 10 workers,
-// queue size of 100).
+// queue size of 100, and Normal priority).
 func New(opts ...Option) Pool {
 	return pool.New(opts...)
 }

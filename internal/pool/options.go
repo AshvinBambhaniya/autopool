@@ -3,7 +3,7 @@ package pool
 import (
 	"time"
 
-	"github.com/AshvinBambhaniya/autopool/pkg/types"
+	"github.com/AshvinBambhaniya/autopool/internal/queue"
 )
 
 // Option is a functional option for configuring the pool.
@@ -31,7 +31,7 @@ func WithMinWorkers(n int) Option {
 func WithQueueSize(n int) Option {
 	return func(p *Pool) {
 		if n > 0 {
-			p.Queue = make(chan types.TaskWrapper, n)
+			p.TaskQueue = queue.New(n)
 		}
 	}
 }

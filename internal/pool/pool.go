@@ -1,4 +1,4 @@
-// package pool contains the core implementation of the worker pool.
+// Package pool contains the core implementation of the worker pool orchestration.
 package pool
 
 import (
@@ -7,51 +7,53 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AshvinBambhaniya/autopool/internal/queue"
 	"github.com/AshvinBambhaniya/autopool/pkg/types"
 )
 
 // Pool is the concrete implementation of the worker pool.
-// It manages workers, scaling, and the task queue.
+// It manages the lifecycle of workers and coordinates task distribution
+// using a priority-aware queue.
 type Pool struct {
-	// Queue is the buffered channel where tasks are submitted.
-	Queue chan types.TaskWrapper
-	// MinWorkers is the minimum number of workers to keep alive.
+	// TaskQueue is the priority-aware queue where tasks are held before processing.
+	TaskQueue *queue.TaskQueue
+	// MinWorkers is the minimum number of workers to keep alive, even when idle.
 	MinWorkers int
-	// MaxWorkers is the maximum allowed number of concurrent workers.
+	// MaxWorkers is the maximum allowed number of concurrent worker goroutines.
 	MaxWorkers int
-	// CurrentWorkers is the atomic count of active goroutines.
+	// CurrentWorkers is the atomic count of total workers currently running.
 	CurrentWorkers int64
-	// IdleWorkers is the atomic count of workers currently waiting for tasks.
+	// IdleWorkers is the atomic count of workers waiting for new tasks.
 	IdleWorkers int64
 
-	// Wg tracks the lifecycle of all spawned workers.
+	// Wg tracks the lifecycle of all spawned workers for graceful shutdown.
 	Wg sync.WaitGroup
-	// Ctx is used for signaling shutdown to workers.
+	// Ctx is used for signaling shutdown to all active workers.
 	Ctx context.Context
-	// Cancel function for Ctx.
+	// Cancel is the function to signal the end of the pool's context.
 	Cancel context.CancelFunc
-	// State tracks the lifecycle state of the pool (Running, Stopping, Stopped).
+	// State tracks the operational state of the pool (Running, Stopping, Stopped).
 	State int32
 
-	// PanicHandler is called if a worker recovers from a panic.
+	// PanicHandler is called if a worker recovers from an unexpected panic.
 	PanicHandler func(interface{})
-	// ErrorHandler is called if a task fails after all retries.
+	// ErrorHandler is called if a task fails after all retry attempts.
 	ErrorHandler func(error)
 	// IdleTimeout is the duration a worker waits for a task before scaling down.
 	IdleTimeout time.Duration
 }
 
-// Lifecycle states of the Pool.
+// Operational states of the Pool.
 const (
 	Running int32 = iota
 	Stopping
 	Stopped
 )
 
-// New creates and initializes a new Pool implementation.
+// New creates and initializes a new Pool orchestration instance.
 func New(opts ...Option) *Pool {
 	p := &Pool{
-		Queue:       make(chan types.TaskWrapper, 100),
+		TaskQueue:   queue.New(100),
 		MinWorkers:  0,
 		MaxWorkers:  10,
 		IdleTimeout: 60 * time.Second,
@@ -64,7 +66,7 @@ func New(opts ...Option) *Pool {
 
 	p.Ctx, p.Cancel = context.WithCancel(context.Background())
 
-	// Spawn the minimum number of initial workers.
+	// Spawn the initial baseline of workers.
 	for i := 0; i < p.MinWorkers; i++ {
 		p.SpawnWorker()
 	}
@@ -72,45 +74,50 @@ func New(opts ...Option) *Pool {
 	return p
 }
 
-// Submit puts a task into the queue.
+// Submit puts a task into the queue with normal priority.
 func (p *Pool) Submit(task types.Task) error {
-	return p.SubmitWithOptions(task, types.TaskOptions{})
+	return p.SubmitWithOptions(task, types.TaskOptions{Priority: types.PriorityNormal})
 }
 
-// SubmitWithOptions puts a task with custom options into the queue.
+// SubmitWithOptions puts a task with custom options into the priority queue.
+// It triggers a scaling check before adding the task.
 func (p *Pool) SubmitWithOptions(task types.Task, opts types.TaskOptions) error {
 	if atomic.LoadInt32(&p.State) != Running {
 		return types.ErrAlreadyClosed
 	}
 
-	// Dynamic scaling up if needed.
+	// Apply default priority if not explicitly specified.
+	if opts.Priority == 0 {
+		opts.Priority = types.PriorityNormal
+	}
+
+	// Trigger proactive scaling if capacity allows.
 	p.ScaleUp()
 
-	select {
-	case p.Queue <- types.TaskWrapper{Fn: task, Opts: opts}:
-		return nil
-	case <-p.Ctx.Done():
+	if !p.TaskQueue.Push(types.TaskWrapper{Fn: task, Opts: opts}) {
 		return types.ErrAlreadyClosed
 	}
+	return nil
 }
 
-// Stats returns a snapshot of current pool performance metrics.
+// Stats returns a snapshot of current pool performance and load metrics.
 func (p *Pool) Stats() types.Stats {
 	return types.Stats{
 		TotalWorkers: int(atomic.LoadInt64(&p.CurrentWorkers)),
 		IdleWorkers:  int(atomic.LoadInt64(&p.IdleWorkers)),
-		QueueSize:    len(p.Queue),
+		QueueSize:    p.TaskQueue.Len(),
 	}
 }
 
 // Shutdown initiates a graceful stop of the pool.
+// It stops accepting new tasks and waits for the queue to drain.
 func (p *Pool) Shutdown(ctx context.Context) error {
 	if !atomic.CompareAndSwapInt32(&p.State, Running, Stopping) {
 		return types.ErrAlreadyClosed
 	}
 
-	// Close the queue to stop accepting new tasks and signal workers.
-	close(p.Queue)
+	// Signal the queue to stop accepting new submissions.
+	p.TaskQueue.Close()
 
 	done := make(chan struct{})
 	go func() {
