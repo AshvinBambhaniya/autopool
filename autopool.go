@@ -10,8 +10,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/AshvinBambhaniya/autopool/internal/pool"
-	"github.com/AshvinBambhaniya/autopool/pkg/types"
+	"github.com/AshvinBambhaniya/autopool/v2/internal/pool"
+	"github.com/AshvinBambhaniya/autopool/v2/pkg/types"
 )
 
 // Pool defines the behavior for the auto-scaling worker pool.

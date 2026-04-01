@@ -3,7 +3,7 @@ package pool
 import (
 	"time"
 
-	"github.com/AshvinBambhaniya/autopool/internal/queue"
+	"github.com/AshvinBambhaniya/autopool/v2/internal/queue"
 )
 
 // Option is a functional option for configuring the pool.

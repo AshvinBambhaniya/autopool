@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/AshvinBambhaniya/autopool"
+	"github.com/AshvinBambhaniya/autopool/v2"
 )
 
 func main() {

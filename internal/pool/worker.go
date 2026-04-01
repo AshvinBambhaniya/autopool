@@ -5,8 +5,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/AshvinBambhaniya/autopool/internal/backoff"
-	"github.com/AshvinBambhaniya/autopool/pkg/types"
+	"github.com/AshvinBambhaniya/autopool/v2/internal/backoff"
+	"github.com/AshvinBambhaniya/autopool/v2/pkg/types"
 )
 
 func (p *Pool) SpawnWorker() {

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AshvinBambhaniya/autopool/pkg/types"
+	"github.com/AshvinBambhaniya/autopool/v2/pkg/types"
 )
 
 // AgingWeight defines the promotion speed for low-priority tasks.

@@ -2,7 +2,7 @@
 package queue
 
 import (
-	"github.com/AshvinBambhaniya/autopool/pkg/types"
+	"github.com/AshvinBambhaniya/autopool/v2/pkg/types"
 )
 
 // TaskItem wraps a task with metadata required for priority queue operations.

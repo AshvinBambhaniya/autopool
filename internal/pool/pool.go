@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/AshvinBambhaniya/autopool/internal/queue"
-	"github.com/AshvinBambhaniya/autopool/pkg/types"
+	"github.com/AshvinBambhaniya/autopool/v2/internal/queue"
+	"github.com/AshvinBambhaniya/autopool/v2/pkg/types"
 )
 
 // Pool is the concrete implementation of the worker pool.

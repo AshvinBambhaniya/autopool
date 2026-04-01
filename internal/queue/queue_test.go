@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AshvinBambhaniya/autopool/pkg/types"
+	"github.com/AshvinBambhaniya/autopool/v2/pkg/types"
 )
 
 // TestQueueBasicOperations tests basic push and pop operations.
