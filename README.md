@@ -5,8 +5,8 @@
 `autopool` is a lightweight, high-performance library that manages an elastic pool of workers to process tasks asynchronously. It combines dynamic auto-scaling with a sophisticated priority-aware queue, ensuring that critical tasks jump the line while background work remains resilient and memory-safe.
 
 [![Go CI](https://github.com/AshvinBambhaniya/autopool/actions/workflows/go.yml/badge.svg)](https://github.com/AshvinBambhaniya/autopool/actions/workflows/go.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/AshvinBambhaniya/autopool)](https://goreportcard.com/report/github.com/AshvinBambhaniya/autopool)
-[![Go Reference](https://pkg.go.dev/badge/github.com/AshvinBambhaniya/autopool.svg)](https://pkg.go.dev/github.com/AshvinBambhaniya/autopool)
+[![Go Report Card](https://goreportcard.com/badge/github.com/AshvinBambhaniya/autopool/v2)](https://goreportcard.com/report/github.com/AshvinBambhaniya/autopool/v2)
+[![Go Reference](https://pkg.go.dev/badge/github.com/AshvinBambhaniya/autopool/v2.svg)](https://pkg.go.dev/github.com/AshvinBambhaniya/autopool/v2)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
@@ -24,7 +24,7 @@
 ## Installation
 
 ```bash
-go get github.com/AshvinBambhaniya/autopool
+go get github.com/AshvinBambhaniya/autopool/v2
 ```
 
 ## Quick Start
@@ -35,7 +35,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/AshvinBambhaniya/autopool"
+	"github.com/AshvinBambhaniya/autopool/v2"
 	"time"
 )
 
